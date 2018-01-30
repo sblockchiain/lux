@@ -956,22 +956,26 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state)
     if (tx.vin.empty())
         return state.DoS(10, error("CheckTransaction() : vin empty"),
             REJECT_INVALID, "bad-txns-vin-empty");
+
     if (tx.vout.empty())
         return state.DoS(10, error("CheckTransaction() : vout empty"),
             REJECT_INVALID, "bad-txns-vout-empty");
+
     // Size limits
     if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
         return state.DoS(100, error("CheckTransaction() : size limits failed"),
             REJECT_INVALID, "bad-txns-oversize");
 
     // Check for negative or overflow output values
+    unsigned i = 0;
     CAmount nValueOut = 0;
-    BOOST_FOREACH (const CTxOut& txout, tx.vout) {
+    for (const CTxOut& txout : tx.vout) {
         if (txout.IsEmpty() && !tx.IsCoinBase() && !tx.IsCoinStake())
             return state.DoS(100, error("CheckTransaction(): txout empty for user transaction"));
 
         if (txout.nValue < 0)
-            return state.DoS(100, error("CheckTransaction() : txout.nValue negative"),
+            return state.DoS(100, error("%s: tx.vout[%d].nValue negative (%s, empty=%s, coinstake=%s)", __func__, i,
+                                        txout.ToString(), (txout.IsEmpty()?"yes":"no"), (tx.IsCoinStake()?"yes":"no")),
                 REJECT_INVALID, "bad-txns-vout-negative");
         if (txout.nValue > MAX_MONEY)
             return state.DoS(100, error("CheckTransaction() : txout.nValue too high"),
@@ -980,7 +984,10 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state)
         if (!MoneyRange(nValueOut))
             return state.DoS(100, error("CheckTransaction() : txout total out of range"),
                 REJECT_INVALID, "bad-txns-txouttotal-toolarge");
+
+        i += 1;
     }
+
 
     // Check for duplicate inputs
     set<COutPoint> vInOutPoints;
@@ -3141,14 +3148,19 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 return state.DoS(100, error("%s: more than one coinstake", __func__));
     }
 
-    LogPrintf("%s: skipping transaction locking checks\n", __func__);
+    LogPrint("debug", "%s: checking transactions, block %s (%s)\n", __func__, block.GetHash().GetHex(), s);
 
     // -------------------------------------------
 
     // Check transactions
-    BOOST_FOREACH (const CTransaction& tx, block.vtx)
-        if (!CheckTransaction(tx, state))
-            return error("%s: CheckTransaction failed", __func__);
+    unsigned int nTx = 0;
+    BOOST_FOREACH (const CTransaction& tx, block.vtx) {
+        if (!CheckTransaction(tx, state)) {
+            LogPrint("debug", "%s: invalid transaction %s", __func__, tx.ToString());
+            return error("%s: CheckTransaction failed (nTx=%d, reason: %s)", __func__, nTx, state.GetRejectReason());
+        }
+        ++nTx;
+    }
 
     unsigned int nSigOps = 0;
     BOOST_FOREACH (const CTransaction& tx, block.vtx) {
@@ -3179,7 +3191,7 @@ bool CheckWork(const CBlock &block, CBlockIndex* const pindexPrev)
 //    }
 
     if (block.IsProofOfWork() && pindexPrev->nHeight + 1 > Params().LAST_POW_BLOCK())
-        return  error("%s: reject proof-of-work at height %d", __func__, pindexPrev->nHeight + 1);
+        return error("%s: reject proof-of-work at height %d", __func__, pindexPrev->nHeight + 1);
 
     if (block.nBits != nBitsRequired)
         return error("%s: incorrect proof of work at %d", __func__, pindexPrev->nHeight + 1);

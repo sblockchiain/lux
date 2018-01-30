@@ -1219,21 +1219,39 @@ CAmount CWallet::GetAnonymizableBalance() const
 
 CAmount CWallet::GetAnonymizedBalance() const
 {
-    if (fLiteMode) return 0;
-
-    CAmount nTotal = 0;
+    int64_t nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
+        LOCK(cs_wallet);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
             const CWalletTx* pcoin = &(*it).second;
 
             if (pcoin->IsTrusted())
-                nTotal += pcoin->GetAnonymizedCredit();
+            {
+                int nDepth = pcoin->GetDepthInMainChain();
+
+                for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
+                    //isminetype mine = IsMine(pcoin->vout[i]);
+                    bool mine = IsMine(pcoin->vout[i]);
+                    //COutput out = COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO);
+                    COutput out = COutput(pcoin, i, nDepth, mine);
+                    CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
+
+                    if(IsSpent(out.tx->GetHash(), i) || !IsMine(pcoin->vout[i]) || !IsDenominated(vin)) continue;
+//                    if(pcoin->IsSpent(i) || !IsMine(pcoin->vout[i]) || !IsDenominated(vin)) continue;
+
+                    int rounds = GetInputLuxsendRounds(vin);
+                    if(rounds >= nDarksendRounds){
+                        nTotal += pcoin->vout[i].nValue;
+                    }
+                }
+            }
         }
     }
 
     return nTotal;
 }
+
 
 // Note: calculated including unconfirmed,
 // that's ok as long as we use it for informational purposes only
@@ -1245,28 +1263,38 @@ double CWallet::GetAverageAnonymizedRounds() const
     double fCount = 0;
 
     {
-        LOCK2(cs_main, cs_wallet);
-        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
+        LOCK(cs_wallet);
+        for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
             const CWalletTx* pcoin = &(*it).second;
 
-            uint256 hash = (*it).first;
+            if (pcoin->IsTrusted())
+            {
+                int nDepth = pcoin->GetDepthInMainChain();
 
-            for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
-                CTxIn vin = CTxIn(hash, i);
+                for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
+                    //isminetype mine = IsMine(pcoin->vout[i]);
+                    bool mine = IsMine(pcoin->vout[i]);
+                    //COutput out = COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO);
+                    COutput out = COutput(pcoin, i, nDepth, mine);
+                    CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
 
-                if (IsSpent(hash, i) || IsMine(pcoin->vout[i]) != ISMINE_SPENDABLE || !IsDenominated(vin)) continue;
+                    if(IsSpent(out.tx->GetHash(), i) || !IsMine(pcoin->vout[i]) || !IsDenominated(vin)) continue;
+//                    if(pcoin->IsSpent(i) || !IsMine(pcoin->vout[i]) || !IsDenominated(vin)) continue;
 
-                int rounds = GetInputDarkSendRounds(vin);
-                fTotal += (float)rounds;
-                fCount += 1;
+                    int rounds = GetInputLuxsendRounds(vin);
+                    fTotal += (float)rounds;
+                    fCount += 1;
+                }
             }
         }
     }
 
-    if (fCount == 0) return 0;
+    if(fCount == 0) return 0;
 
-    return fTotal / fCount;
+    return fTotal/fCount;
 }
+
 
 // Note: calculated including unconfirmed,
 // that's ok as long as we use it for informational purposes only
@@ -2560,18 +2588,19 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     }
 
     // Check vout values.
-    for (int i = 0; i < txNew.vout.size(); ++i) {
-        auto nValue = txNew.vout[i].nValue;
-        if (nValue < 0 || nValue > MAX_MONEY) {
-            return error("%s: bad nValue (vout[%d].nValue = %d)", __func__, i, nValue);
+    unsigned i = 0;
+    for (auto &vout : txNew.vout) {
+        if (vout.nValue < 0 || vout.nValue > MAX_MONEY) {
+            return error("%s: bad nValue (vout[%d].nValue = %d)", __func__, i, vout.nValue);
         }
+        i += 1;
     }
 
     // Sign
-    int nIn = 0;
-    BOOST_FOREACH (const CWalletTx* pcoin, vwtxPrev) {
-        if (!SignSignature(*this, *pcoin, txNew, nIn++))
-            return error("%s: failed to sign coinstake", __func__);
+    i = 0;
+    for (const CWalletTx* pcoin : vwtxPrev) {
+        if (!SignSignature(*this, *pcoin, txNew, i++))
+            return error("%s: failed to sign coinstake (%d)", __func__, i);
     }
 
     // Successfully generated coinstake
@@ -3735,4 +3764,13 @@ bool CMerkleTx::IsTransactionLockTimedOut() const
     }
 
     return false;
+}
+
+bool CWallet::AddAdrenalineNodeConfig(CAdrenalineNodeConfig nodeConfig)
+{
+    bool rv = CWalletDB(strWalletFile).WriteAdrenalineNodeConfig(nodeConfig.sAlias, nodeConfig);
+    if(rv)
+	uiInterface.NotifyAdrenalineNodeChanged(nodeConfig);
+
+    return rv;
 }
