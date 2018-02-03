@@ -9,7 +9,8 @@
 #include "script/script.h"
 #include "util.h"
 #include "utilstrencodings.h"
-
+#include <sm/luxstate.h>
+#include <sm/luxtransaction.h>
 #include <boost/foreach.hpp>
 
 using namespace std;
