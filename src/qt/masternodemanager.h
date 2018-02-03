@@ -1,4 +1,3 @@
-// -*- c++ -*-
 #ifndef MASTERNODEMANAGER_H
 #define MASTERNODEMANAGER_H
 

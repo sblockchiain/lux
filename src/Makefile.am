@@ -456,8 +456,8 @@ libbitcoin_common_a_SOURCES = \
     cpp-ethereum/libethashseal/genesis/homesteadTest.cpp \
     cpp-ethereum/libethashseal/genesis/mainNetworkTest.cpp \
     cpp-ethereum/libethashseal/genesis/metropolisTest.cpp \
-    cpp-ethereum/libethashseal/genesis/luxMainNetwork.cpp \
-    cpp-ethereum/libethashseal/genesis/luxTestNetwork.cpp \
+    cpp-ethereum/libethashseal/genesis/qtumMainNetwork.cpp \
+    cpp-ethereum/libethashseal/genesis/qtumTestNetwork.cpp \
     cpp-ethereum/libethashseal/genesis/ropsten.cpp \
     cpp-ethereum/libethashseal/genesis/transitionnetTest.cpp \
     cpp-ethereum/libethash/ethash.h \

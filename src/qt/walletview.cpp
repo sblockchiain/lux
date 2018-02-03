@@ -11,7 +11,7 @@
 #include "blockexplorer.h"
 #include "clientmodel.h"
 #include "guiutil.h"
-#include "masternodeconfig.h"
+//#include "masternodeconfig.h"
 #include "multisenddialog.h"
 #include "optionsmodel.h"
 #include "overviewpage.h"
@@ -84,8 +84,8 @@ WalletView::WalletView(QWidget* parent) : QStackedWidget(parent),
 
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
-        masternodeManagerPage = new MasternodeManager();
-        addWidget(masternodeManagerPage);
+        masternodeListPage = new MasternodeManager();
+        addWidget(masternodeListPage);
     }
 
     // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
@@ -136,7 +136,7 @@ void WalletView::setClientModel(ClientModel* clientModel)
     sendCoinsPage->setClientModel(clientModel);
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
-        masternodeManagerPage->setClientModel(clientModel);
+        masternodeListPage->setClientModel(clientModel);
     }
 }
 
@@ -149,7 +149,7 @@ void WalletView::setWalletModel(WalletModel* walletModel)
     overviewPage->setWalletModel(walletModel);
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
-        masternodeManagerPage->setWalletModel(walletModel);
+        masternodeListPage->setWalletModel(walletModel);
     }
     receiveCoinsPage->setModel(walletModel);
     sendCoinsPage->setModel(walletModel);
@@ -216,7 +216,7 @@ void WalletView::gotoMasternodePage()
 {
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
-        setCurrentWidget(masternodeManagerPage);
+        setCurrentWidget(masternodeListPage);
     }
 }
 

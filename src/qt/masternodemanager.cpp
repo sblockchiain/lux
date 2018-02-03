@@ -24,13 +24,11 @@ using namespace std;
 #include <QTimer>
 #include <QDebug>
 #include <QScrollArea>
-#include <QScroller>
 #include <QDateTime>
 #include <QApplication>
 #include <QClipboard>
 #include <QMessageBox>
 #include <QThread>
-#include <QtConcurrent/QtConcurrent>
 #include <QScrollBar>
 
 MasternodeManager::MasternodeManager(QWidget *parent) :
@@ -47,8 +45,6 @@ MasternodeManager::MasternodeManager(QWidget *parent) :
     ui->stopButton->setEnabled(false);
     ui->copyAddressButton->setEnabled(false);
 
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    ui->tableWidget_2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     subscribeToCoreSignals();
 
@@ -87,12 +83,6 @@ void MasternodeManager::subscribeToCoreSignals()
 {
     // Connect signals to core
     uiInterface.NotifyAdrenalineNodeChanged.connect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
-}
-
-void MasternodeManager::unsubscribeFromCoreSignals()
-{
-    // Disconnect signals from core
-    uiInterface.NotifyAdrenalineNodeChanged.disconnect(boost::bind(&NotifyAdrenalineNodeUpdated, this, _1));
 }
 
 void MasternodeManager::on_tableWidget_2_itemSelectionChanged()
@@ -170,9 +160,9 @@ void MasternodeManager::updateNodeList()
 	// Address, Rank, Active, Active Seconds, Last Seen, Pub Key
 	QTableWidgetItem *activeItem = new QTableWidgetItem(QString::number(mn.IsEnabled()));
 	QTableWidgetItem *addressItem = new QTableWidgetItem(QString::fromStdString(mn.addr.ToString()));
-	QTableWidgetItem *rankItem = new QTableWidgetItem(QString::number(GetMasternodeRank(mn.vin, chainActive.Tip()->nHeight)));
+	QTableWidgetItem *rankItem = new QTableWidgetItem(QString::number(GetMasternodeRank(mn.vin, pindexBestHeader->nHeight)));
 	QTableWidgetItem *activeSecondsItem = new QTableWidgetItem(seconds_to_DHMS((qint64)(mn.lastTimeSeen - mn.now)));
-	QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat("%Y-%m-%d %H:%M:%S", mn.lastTimeSeen)));
+	QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat("%Y-%m-%d %H:%M:%S UTC", mn.lastTimeSeen)));
 	
 	CScript pubkey;
         pubkey =GetScriptForDestination(mn.pubkey.GetID());

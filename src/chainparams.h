@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto                     -*- c++ -*-
+// Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -177,7 +177,9 @@ void SelectParams(CBaseChainParams::Network network);
  */
 bool SelectParamsFromCommandLine();
 
-// Note: it's deliberate that this returns "false" for regression test mode.
-inline bool IsTestNet() { return Params().NetworkID() == CBaseChainParams::TESTNET; }
+inline bool TestNet() {
+    // Note: it's deliberate that this returns "false" for regression test mode.
+    return Params().NetworkID() == CBaseChainParams::TESTNET;
+}
 
 #endif // BITCOIN_CHAINPARAMS_H

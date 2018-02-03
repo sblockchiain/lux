@@ -13,6 +13,7 @@
 #include "guiutil.h"
 #include "init.h"
 #include "darksend.h"
+#include "darksendconfig.h"
 #include "optionsmodel.h"
 #include "transactionfilterproxy.h"
 #include "transactiontablemodel.h"
@@ -134,18 +135,18 @@ OverviewPage::OverviewPage(QWidget* parent) : QWidget(parent),
         ui->frameObfuscation->setVisible(false);
     } else {
         if (fMasterNode) {
-            ui->toggleObfuscation->setText("(" + tr("Disabled") + ")");
-            ui->obfuscationAuto->setText("(" + tr("Disabled") + ")");
-            ui->obfuscationReset->setText("(" + tr("Disabled") + ")");
+            ui->toggleLuxsend->setText("(" + tr("Disabled") + ")");
+            ui->darksendAuto->setText("(" + tr("Disabled") + ")");
+            ui->darksendReset->setText("(" + tr("Disabled") + ")");
             ui->frameObfuscation->setEnabled(false);
         } else {
             if (!fEnableLuxsend) {
-                ui->toggleObfuscation->setText(tr("Start Obfuscation"));
+                ui->toggleLuxsend->setText(tr("Start Obfuscation"));
             } else {
-                ui->toggleObfuscation->setText(tr("Stop Obfuscation"));
+                ui->toggleLuxsend->setText(tr("Stop Obfuscation"));
             }
             timer = new QTimer(this);
-            connect(timer, SIGNAL(timeout()), this, SLOT(obfuscationStatus()));
+            connect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
             timer->start(1000);
         }
     }
@@ -162,7 +163,7 @@ void OverviewPage::handleTransactionClicked(const QModelIndex& index)
 
 OverviewPage::~OverviewPage()
 {
-    if (!fLiteMode && !fMasterNode) disconnect(timer, SIGNAL(timeout()), this, SLOT(obfuscationStatus()));
+    if (!fLiteMode && !fMasterNode) disconnect(timer, SIGNAL(timeout()), this, SLOT(darkSendStatus()));
     delete ui;
 }
 
@@ -199,7 +200,7 @@ void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmed
     ui->labelImmatureText->setVisible(showImmature || showWatchOnlyImmature);
     ui->labelWatchImmature->setVisible(showWatchOnlyImmature); // show watch-only immature balance
 
-    updateObfuscationProgress();
+    updateLuxsendProgress();
 
     static int cachedTxLocks = 0;
 
@@ -262,9 +263,10 @@ void OverviewPage::setWalletModel(WalletModel* model)
 
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 
-        connect(ui->obfuscationAuto, SIGNAL(clicked()), this, SLOT(obfuscationAuto()));
-        connect(ui->obfuscationReset, SIGNAL(clicked()), this, SLOT(obfuscationReset()));
-        connect(ui->toggleObfuscation, SIGNAL(clicked()), this, SLOT(toggleObfuscation()));
+        connect(ui->darksendAuto, SIGNAL(clicked()), this, SLOT(darksendAuto()));
+        connect(ui->darksendReset, SIGNAL(clicked()), this, SLOT(darksendReset()));
+        connect(ui->darksendReset, SIGNAL(clicked()), this, SLOT(darksendReset()));
+        connect(ui->toggleLuxsend, SIGNAL(clicked()), this, SLOT(toggleLuxsend()));
         updateWatchOnlyLabels(model->haveWatchOnly());
         connect(model, SIGNAL(notifyWatchonlyChanged(bool)), this, SLOT(updateWatchOnlyLabels(bool)));
     }
@@ -301,241 +303,252 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
     ui->labelTransactionsStatus->setVisible(fShow);
 }
 
-void OverviewPage::updateObfuscationProgress()
+void OverviewPage::updateLuxsendProgress()
 {
-    if (!pwalletMain) return;
+//    qDebug() << "updateLuxsendProgress()";
+    if(IsInitialBlockDownload()) return;
 
-    QString strAmountAndRounds;
-    QString strAnonymizeLuxAmount = BitcoinUnits::formatHtmlWithUnit(nDisplayUnit, nAnonymizeLuxAmount * COIN, false, BitcoinUnits::separatorAlways);
-
-    if (currentBalance == 0) {
-        ui->obfuscationProgress->setValue(0);
-        ui->obfuscationProgress->setToolTip(tr("No inputs detected"));
-
-        // when balance is zero just show info from settings
-        strAnonymizeLuxAmount = strAnonymizeLuxAmount.remove(strAnonymizeLuxAmount.indexOf("."), BitcoinUnits::decimals(nDisplayUnit) + 1);
-        strAmountAndRounds = strAnonymizeLuxAmount + " / " + tr("%n Rounds", "", nDarksendRounds);
-
-        ui->labelAmountRounds->setToolTip(tr("No inputs detected"));
-        ui->labelAmountRounds->setText(strAmountAndRounds);
+//    qDebug() << "updateLuxsendProgress() getbalance";
+    int64_t nBalance = pwalletMain->GetBalance();
+    if(nBalance == 0)
+    {
+        ui->darksendProgress->setValue(0);
+        QString s(tr("No inputs detected"));
+        ui->darksendProgress->setToolTip(s);
         return;
     }
 
-    CAmount nDenominatedConfirmedBalance;
-    CAmount nDenominatedUnconfirmedBalance;
-    CAmount nAnonymizableBalance;
-    CAmount nNormalizedAnonymizedBalance;
-    double nAverageAnonymizedRounds;
-
+    //get denominated unconfirmed inputs
+    if(pwalletMain->GetDenominatedBalance(true, true) > 0)
     {
-        TRY_LOCK(cs_main, lockMain);
-        if (!lockMain) return;
-
-        nDenominatedConfirmedBalance = pwalletMain->GetDenominatedBalance(false);
-        nDenominatedUnconfirmedBalance = pwalletMain->GetDenominatedBalance(true, false);
-        nAnonymizableBalance = pwalletMain->GetAnonymizableBalance();
-        nNormalizedAnonymizedBalance = pwalletMain->GetNormalizedAnonymizedBalance();
-        nAverageAnonymizedRounds = pwalletMain->GetAverageAnonymizedRounds();
+        QString s(tr("Found unconfirmed denominated outputs, will wait till they confirm to recalculate."));
+        ui->darksendProgress->setToolTip(s);
+        return;
     }
 
-    CAmount nMaxToAnonymize = nAnonymizableBalance + currentAnonymizedBalance + nDenominatedUnconfirmedBalance;
+    //Get the anon threshold
+    int64_t nMaxToAnonymize = nAnonymizeLuxAmount*COIN;
 
-    // If it's more than the anon threshold, limit to that.
-    if (nMaxToAnonymize > nAnonymizeLuxAmount * COIN) nMaxToAnonymize = nAnonymizeLuxAmount * COIN;
+    // If it's more than the wallet amount, limit to that.
+    if(nMaxToAnonymize > nBalance) nMaxToAnonymize = nBalance;
 
-    if (nMaxToAnonymize == 0) return;
+    if(nMaxToAnonymize == 0) return;
 
-    if (nMaxToAnonymize >= nAnonymizeLuxAmount * COIN) {
-        ui->labelAmountRounds->setToolTip(tr("Found enough compatible inputs to anonymize %1")
-                                              .arg(strAnonymizeLuxAmount));
-        strAnonymizeLuxAmount = strAnonymizeLuxAmount.remove(strAnonymizeLuxAmount.indexOf("."), BitcoinUnits::decimals(nDisplayUnit) + 1);
-        strAmountAndRounds = strAnonymizeLuxAmount + " / " + tr("%n Rounds", "", nDarksendRounds);
-    } else {
-        QString strMaxToAnonymize = BitcoinUnits::formatHtmlWithUnit(nDisplayUnit, nMaxToAnonymize, false, BitcoinUnits::separatorAlways);
-        ui->labelAmountRounds->setToolTip(tr("Not enough compatible inputs to anonymize <span style='color:red;'>%1</span>,<br>"
-                                             "will anonymize <span style='color:red;'>%2</span> instead")
-                                              .arg(strAnonymizeLuxAmount)
-                                              .arg(strMaxToAnonymize));
-        strMaxToAnonymize = strMaxToAnonymize.remove(strMaxToAnonymize.indexOf("."), BitcoinUnits::decimals(nDisplayUnit) + 1);
-        strAmountAndRounds = "<span style='color:red;'>" +
-                             QString(BitcoinUnits::factor(nDisplayUnit) == 1 ? "" : "~") + strMaxToAnonymize +
-                             " / " + tr("%n Rounds", "", nDarksendRounds) + "</span>";
-    }
-    ui->labelAmountRounds->setText(strAmountAndRounds);
-
-    // calculate parts of the progress, each of them shouldn't be higher than 1
-    // progress of denominating
-    float denomPart = 0;
+    // calculate parts of the progress, each of them shouldn't be higher than 1:
     // mixing progress of denominated balance
-    float anonNormPart = 0;
-    // completeness of full amount anonimization
-    float anonFullPart = 0;
+    int64_t denominatedBalance = pwalletMain->GetDenominatedBalance(true,false);
+    float denomPart = 0;
+    if(denominatedBalance > 0)
+    {
+        denomPart = (float)pwalletMain->GetNormalizedAnonymizedBalance() / pwalletMain->GetDenominatedBalance(true,false);
+        denomPart = denomPart > 1 ? 1 : denomPart;
+    }
 
-    CAmount denominatedBalance = nDenominatedConfirmedBalance + nDenominatedUnconfirmedBalance;
-    denomPart = (float)denominatedBalance / nMaxToAnonymize;
-    denomPart = denomPart > 1 ? 1 : denomPart;
-    denomPart *= 100;
+    // % of fully anonymized balance
+    float anonPart = 0;
+    if(nMaxToAnonymize > 0)
+    {
+        anonPart = (float)pwalletMain->GetAnonymizedBalance() / nMaxToAnonymize;
+        // if anonPart is > 1 then we are done, make denomPart equal 1 too
+        anonPart = anonPart > 1 ? (denomPart = 1, 1) : anonPart;
+    }
 
-    anonNormPart = (float)nNormalizedAnonymizedBalance / nMaxToAnonymize;
-    anonNormPart = anonNormPart > 1 ? 1 : anonNormPart;
-    anonNormPart *= 100;
+    // apply some weights to them (sum should be <=100) and calculate the whole progress
+    int progress = 80 * denomPart + 20 * anonPart;
+    if(progress > 100) progress = 100;
 
-    anonFullPart = (float)currentAnonymizedBalance / nMaxToAnonymize;
-    anonFullPart = anonFullPart > 1 ? 1 : anonFullPart;
-    anonFullPart *= 100;
+    ui->darksendProgress->setValue(progress);
 
-    // apply some weights to them ...
-    float denomWeight = 1;
-    float anonNormWeight = nDarksendRounds;
-    float anonFullWeight = 2;
-    float fullWeight = denomWeight + anonNormWeight + anonFullWeight;
-    // ... and calculate the whole progress
-    float denomPartCalc = ceilf((denomPart * denomWeight / fullWeight) * 100) / 100;
-    float anonNormPartCalc = ceilf((anonNormPart * anonNormWeight / fullWeight) * 100) / 100;
-    float anonFullPartCalc = ceilf((anonFullPart * anonFullWeight / fullWeight) * 100) / 100;
-    float progress = denomPartCalc + anonNormPartCalc + anonFullPartCalc;
-    if (progress >= 100) progress = 100;
-
-    ui->obfuscationProgress->setValue(progress);
-
-    QString strToolPip = ("<b>" + tr("Overall progress") + ": %1%</b><br/>" +
-                          tr("Denominated") + ": %2%<br/>" +
-                          tr("Mixed") + ": %3%<br/>" +
-                          tr("Anonymized") + ": %4%<br/>" +
-                          tr("Denominated inputs have %5 of %n rounds on average", "", nDarksendRounds))
-                             .arg(progress)
-                             .arg(denomPart)
-                             .arg(anonNormPart)
-                             .arg(anonFullPart)
-                             .arg(nAverageAnonymizedRounds);
-    ui->obfuscationProgress->setToolTip(strToolPip);
+    std::ostringstream convert;
+    convert << "Progress: " << progress << "%, inputs have an average of " << pwalletMain->GetAverageAnonymizedRounds() << " of " << nDarksendRounds << " rounds";
+    QString s(convert.str().c_str());
+    ui->darksendProgress->setToolTip(s);
 }
 
-void OverviewPage::obfuscationStatus()
+
+void OverviewPage::darkSendStatus()
 {
-#if 0
-    static int64_t nLastDSProgressBlockTime = 0;
+    int nBestHeight = pindexBestHeader->nHeight;
 
-    int nBestHeight = chainActive.Tip()->nHeight;
+    if(nBestHeight != darkSendPool.cachedNumBlocks)
+    {
+        //we we're processing lots of blocks, we'll just leave
+        if(GetTime() - lastNewBlock < 10) return;
+        lastNewBlock = GetTime();
 
-    // we we're processing more then 1 block per second, we'll just leave
-    //if (((nBestHeight - obfuscationPool.cachedNumBlocks) / (GetTimeMillis() - nLastDSProgressBlockTime + 1) > 1)) return;
-    nLastDSProgressBlockTime = GetTimeMillis();
+        updateLuxsendProgress();
 
-    if (!fEnableLuxsend) {
-        if (nBestHeight != obfuscationPool.cachedNumBlocks) {
-            obfuscationPool.cachedNumBlocks = nBestHeight;
-            updateObfuscationProgress();
+        QString strSettings(" " + tr("Rounds"));
+        strSettings.prepend(QString::number(nDarksendRounds)).prepend(" / ");
+        strSettings.prepend(BitcoinUnits::formatWithUnit(
+                walletModel->getOptionsModel()->getDisplayUnit(),
+                nAnonymizeLuxAmount * COIN)
+        );
 
-            ui->obfuscationEnabled->setText(tr("Disabled"));
-            ui->obfuscationStatus->setText("");
-            ui->toggleObfuscation->setText(tr("Start Obfuscation"));
+        ui->labelAmountRounds->setText(strSettings);
+    }
+
+    if(!fEnableLuxsend) {
+        if(nBestHeight != darkSendPool.cachedNumBlocks)
+        {
+            darkSendPool.cachedNumBlocks = nBestHeight;
+
+            ui->darksendEnabled->setText(tr("Disabled"));
+            ui->darksendStatus->setText("");
+            ui->toggleLuxsend->setText(tr("Start Luxsend"));
         }
 
         return;
     }
 
-    // check obfuscation status and unlock if needed
-    if (nBestHeight != obfuscationPool.cachedNumBlocks) {
+    // check darksend status and unlock if needed
+    if(nBestHeight != darkSendPool.cachedNumBlocks)
+    {
         // Balance and number of transactions might have changed
-        obfuscationPool.cachedNumBlocks = nBestHeight;
-        updateObfuscationProgress();
+        darkSendPool.cachedNumBlocks = nBestHeight;
 
-        ui->obfuscationEnabled->setText(tr("Enabled"));
+        /* *******************************************************/
+
+        ui->darksendEnabled->setText(tr("Enabled"));
     }
 
-    QString strStatus = QString(obfuscationPool.GetStatus().c_str());
+    int state = darkSendPool.GetState();
+    int entries = darkSendPool.GetEntriesCount();
+    int accepted = darkSendPool.GetLastEntryAccepted();
 
-    QString s = tr("Last Obfuscation message:\n") + strStatus;
+    /* ** @TODO this string creation really needs some clean ups ---vertoe ** */
+    std::ostringstream convert;
 
-    if (s != ui->obfuscationStatus->text())
-        LogPrintf("Last Obfuscation message: %s\n", strStatus.toStdString());
+    if(state == POOL_STATUS_ACCEPTING_ENTRIES) {
+        if(entries == 0) {
+            if(darkSendPool.strAutoDenomResult.size() == 0){
+                convert << tr("Luxsend is idle.").toStdString();
+            } else {
+                convert << darkSendPool.strAutoDenomResult;
+            }
+            showingDarkSendMessage = 0;
+        } else if (accepted == 1) {
+            convert << tr("Luxsend request complete: Your transaction was accepted into the pool!").toStdString();
+            if(showingDarkSendMessage % 10 > 8) {
+                darkSendPool.lastEntryAccepted = 0;
+                showingDarkSendMessage = 0;
+            }
+        } else {
+            if(showingDarkSendMessage % 70 <= 40) convert << tr("Submitted following entries to masternode:").toStdString() << " " << entries << "/" << darkSendPool.GetMaxPoolTransactions();
+            else if(showingDarkSendMessage % 70 <= 50) convert << tr("Submitted to masternode, Waiting for more entries").toStdString() << " (" << entries << "/" << darkSendPool.GetMaxPoolTransactions() << " ) .";
+            else if(showingDarkSendMessage % 70 <= 60) convert << tr("Submitted to masternode, Waiting for more entries").toStdString() << " (" << entries << "/" << darkSendPool.GetMaxPoolTransactions() << " ) ..";
+            else if(showingDarkSendMessage % 70 <= 70) convert << tr("Submitted to masternode, Waiting for more entries").toStdString() << " (" << entries << "/" << darkSendPool.GetMaxPoolTransactions() << " ) ...";
+        }
+    } else if(state == POOL_STATUS_SIGNING) {
+        if(showingDarkSendMessage % 70 <= 10) convert << tr("Found enough users, signing ...").toStdString();
+        else if(showingDarkSendMessage % 70 <= 20) convert << tr("Found enough users, signing ( waiting. )").toStdString();
+        else if(showingDarkSendMessage % 70 <= 30) convert << tr("Found enough users, signing ( waiting.. )").toStdString();
+        else if(showingDarkSendMessage % 70 <= 40) convert << tr("Found enough users, signing ( waiting... )").toStdString();
+    } else if(state == POOL_STATUS_TRANSMISSION) {
+        convert << tr("Transmitting final transaction.").toStdString();
+    } else if (state == POOL_STATUS_IDLE) {
+        convert << tr("Luxsend is idle.").toStdString();
+    } else if (state == POOL_STATUS_FINALIZE_TRANSACTION) {
+        convert << tr("Finalizing transaction.").toStdString();
+    } else if(state == POOL_STATUS_ERROR) {
+        convert << tr("Luxsend request incomplete:").toStdString() << " " << darkSendPool.lastMessage << ". " << tr("Will retry...").toStdString();
+    } else if(state == POOL_STATUS_SUCCESS) {
+        convert << tr("Luxsend request complete:").toStdString() << " " << darkSendPool.lastMessage;
+    } else if(state == POOL_STATUS_QUEUE) {
+        if(showingDarkSendMessage % 70 <= 50) convert << tr("Submitted to masternode, waiting in queue .").toStdString();
+        else if(showingDarkSendMessage % 70 <= 60) convert << tr("Submitted to masternode, waiting in queue ..").toStdString();
+        else if(showingDarkSendMessage % 70 <= 70) convert << tr("Submitted to masternode, waiting in queue ...").toStdString();
+    } else {
+        convert << tr("Unknown state:").toStdString() << " id = " << state;
+    }
 
-    ui->obfuscationStatus->setText(s);
+    if(state == POOL_STATUS_ERROR || state == POOL_STATUS_SUCCESS) darkSendPool.Check();
 
-    if (obfuscationPool.sessionDenom == 0) {
+    QString s(convert.str().c_str());
+    s = tr("Last Luxsend message:\n") + s;
+
+    if(s != ui->darksendStatus->text())
+        LogPrintf("Last Luxsend message: %s\n", convert.str().c_str());
+
+    ui->darksendStatus->setText(s);
+
+    if(darkSendPool.sessionDenom == 0){
         ui->labelSubmittedDenom->setText(tr("N/A"));
     } else {
         std::string out;
-        obfuscationPool.GetDenominationsToString(obfuscationPool.sessionDenom, out);
+        darkSendPool.GetDenominationsToString(darkSendPool.sessionDenom, out);
         QString s2(out.c_str());
         ui->labelSubmittedDenom->setText(s2);
     }
-#endif
+
+    showingDarkSendMessage++;
+    darksendActionCheck++;
+
+    // Get DarkSend Denomination Status
 }
 
-void OverviewPage::obfuscationAuto()
-{
-#if 0
-    obfuscationPool.DoAutomaticDenominating();
-#endif
+void OverviewPage::darksendAuto(){
+    darkSendPool.DoAutomaticDenominating();
 }
 
-void OverviewPage::obfuscationReset()
-{
-#if 0
-    obfuscationPool.Reset();
+void OverviewPage::darksendReset(){
+    darkSendPool.Reset();
 
-    QMessageBox::warning(this, tr("Obfuscation"),
-        tr("Obfuscation was successfully reset."),
-        QMessageBox::Ok, QMessageBox::Ok);
-#endif
+    QMessageBox::warning(this, tr("Luxsend"),
+                         tr("Luxsend was successfully reset."),
+                         QMessageBox::Ok, QMessageBox::Ok);
 }
 
-void OverviewPage::toggleObfuscation()
-{
-#if 0
-    QSettings settings;
-    // Popup some information on first mixing
-    QString hasMixed = settings.value("hasMixed").toString();
-    if (hasMixed.isEmpty()) {
-        QMessageBox::information(this, tr("Obfuscation"),
-            tr("If you don't want to see internal Obfuscation fees/transactions select \"Most Common\" as Type on the \"Transactions\" tab."),
-            QMessageBox::Ok, QMessageBox::Ok);
-        settings.setValue("hasMixed", "hasMixed");
-    }
-    if (!fEnableLuxsend) {
-        int64_t balance = currentBalance;
-        float minAmount = 14.90 * COIN;
-        if (balance < minAmount) {
-            QString strMinAmount(BitcoinUnits::formatWithUnit(nDisplayUnit, minAmount));
-            QMessageBox::warning(this, tr("Obfuscation"),
-                tr("Obfuscation requires at least %1 to use.").arg(strMinAmount),
-                QMessageBox::Ok, QMessageBox::Ok);
+void OverviewPage::toggleLuxsend(){
+    if(!fEnableLuxsend){
+        int64_t balance = pwalletMain->GetBalance();
+        float minAmount = 1.49 * COIN;
+        if(balance < minAmount){
+            QString strMinAmount(
+                    BitcoinUnits::formatWithUnit(
+                            walletModel->getOptionsModel()->getDisplayUnit(),
+                            minAmount));
+            QMessageBox::warning(this, tr("Luxsend"),
+                                 tr("Luxsend requires at least %1 to use.").arg(strMinAmount),
+                                 QMessageBox::Ok, QMessageBox::Ok);
             return;
         }
 
         // if wallet is locked, ask for a passphrase
-        if (walletModel->getEncryptionStatus() == WalletModel::Locked) {
-            WalletModel::UnlockContext ctx(walletModel->requestUnlock(false));
-            if (!ctx.isValid()) {
+        if (walletModel->getEncryptionStatus() == WalletModel::Locked)
+        {
+            WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+            if(!ctx.isValid())
+            {
                 //unlock was cancelled
-                obfuscationPool.cachedNumBlocks = std::numeric_limits<int>::max();
-                QMessageBox::warning(this, tr("Obfuscation"),
-                    tr("Wallet is locked and user declined to unlock. Disabling Obfuscation."),
-                    QMessageBox::Ok, QMessageBox::Ok);
-                if (fDebug) LogPrintf("Wallet is locked and user declined to unlock. Disabling Obfuscation.\n");
+                darkSendPool.cachedNumBlocks = 0;
+                QMessageBox::warning(this, tr("Luxsend"),
+                                     tr("Wallet is locked and user declined to unlock. Disabling Luxsend."),
+                                     QMessageBox::Ok, QMessageBox::Ok);
+                if (fDebug) LogPrintf("Wallet is locked and user declined to unlock. Disabling Luxsend.\n");
                 return;
             }
         }
+
     }
 
+    darkSendPool.cachedNumBlocks = 0;
     fEnableLuxsend = !fEnableLuxsend;
-    obfuscationPool.cachedNumBlocks = std::numeric_limits<int>::max();
 
-    if (!fEnableLuxsend) {
-        ui->toggleObfuscation->setText(tr("Start Obfuscation"));
-        obfuscationPool.UnlockCoins();
+    if(!fEnableLuxsend){
+        ui->toggleLuxsend->setText(tr("Start Luxsend"));
     } else {
-        ui->toggleObfuscation->setText(tr("Stop Obfuscation"));
+        ui->toggleLuxsend->setText(tr("Stop Luxsend"));
 
-        /* show obfuscation configuration if client has defaults set */
+        /* show darksend configuration if client has defaults set */
 
-        if (nAnonymizeLuxAmount == 0) {
-            ObfuscationConfig dlg(this);
+        if(nAnonymizeLuxAmount == 0){
+            LuxsendConfig dlg(this);
             dlg.setModel(walletModel);
             dlg.exec();
         }
+
+        darkSendPool.DoAutomaticDenominating();
     }
-#endif
 }
+

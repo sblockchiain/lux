@@ -1,5 +1,3 @@
-# -*- makefile-gmake -*-
-
 bin_PROGRAMS += qt/test/test_lux-qt
 TESTS += qt/test/test_lux-qt
 

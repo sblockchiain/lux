@@ -72,8 +72,8 @@ void OptionsModel::Init()
         settings.setValue("fCoinControlFeatures", false);
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
 
-    if (!settings.contains("nDarksendRounds"))
-        settings.setValue("nDarksendRounds", 2);
+    if (!settings.contains("nObfuscationRounds"))
+        settings.setValue("nObfuscationRounds", 2);
 
     if (!settings.contains("nAnonymizeLuxAmount"))
         settings.setValue("nAnonymizeLuxAmount", 1000);
@@ -144,8 +144,8 @@ void OptionsModel::Init()
     if (!SoftSetArg("-lang", settings.value("language").toString().toStdString()))
         addOverriddenOption("-lang");
 
-    if (settings.contains("nDarksendRounds"))
-        SoftSetArg("-obfuscationrounds", settings.value("nDarksendRounds").toString().toStdString());
+    if (settings.contains("nObfuscationRounds"))
+        SoftSetArg("-obfuscationrounds", settings.value("nObfuscationRounds").toString().toStdString());
     if (settings.contains("nAnonymizeLuxAmount"))
         SoftSetArg("-anonymizeluxamount", settings.value("nAnonymizeLuxAmount").toString().toStdString());
 
@@ -225,7 +225,7 @@ QVariant OptionsModel::data(const QModelIndex& index, int role) const
             return settings.value("nDatabaseCache");
         case ThreadsScriptVerif:
             return settings.value("nThreadsScriptVerif");
-        case DarksendRounds:
+        case LuxsendRounds:
             return QVariant(nDarksendRounds);
         case AnonymizeLuxAmount:
             return QVariant(nAnonymizeLuxAmount);
@@ -332,10 +332,10 @@ bool OptionsModel::setData(const QModelIndex& index, const QVariant& value, int 
                 setRestartRequired(true);
             }
             break;
-        case DarksendRounds:
+        case LuxsendRounds:
             nDarksendRounds = value.toInt();
             settings.setValue("nDarksendRounds", nDarksendRounds);
-            emit obfuscationRoundsChanged(nDarksendRounds);
+            emit darksendRoundsChanged(nDarksendRounds);
             break;
         case AnonymizeLuxAmount:
             nAnonymizeLuxAmount = value.toInt();

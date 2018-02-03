@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto                     -*- c++ -*-
+// Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -315,7 +315,11 @@ public:
 
     unsigned int GetStakeEntropyBit() const
     {
-        return ((GetBlockHash().Get64()) & 1llu);
+        unsigned int nEntropyBit = ((GetBlockHash().Get64()) & 1llu);
+        if (fDebug || GetBoolArg("-printstakemodifier", false))
+            LogPrintf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetBlockHash().ToString().c_str(), nEntropyBit);
+
+        return nEntropyBit;
     }
 
     bool SetStakeEntropyBit(unsigned int nEntropyBit)
@@ -428,7 +432,6 @@ public:
         if (IsProofOfStake()) {
             READWRITE(prevoutStake);
             READWRITE(nStakeTime);
-            READWRITE(hashProofOfStake);
         } else {
             const_cast<CDiskBlockIndex*>(this)->prevoutStake.SetNull();
             const_cast<CDiskBlockIndex*>(this)->nStakeTime = 0;

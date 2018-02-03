@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 The Bitcoin developers           -*- c++ -*-
+// Copyright (c) 2011-2013 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -66,7 +66,7 @@ private:
     ReceiveCoinsDialog* receiveCoinsPage;
     SendCoinsDialog* sendCoinsPage;
     BlockExplorer* explorerWindow;
-    MasternodeManager* masternodeManagerPage;
+    MasternodeManager* masternodeListPage;
 
     TransactionView* transactionView;
 

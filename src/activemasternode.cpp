@@ -417,7 +417,7 @@ vector<COutput> CActiveMasternode::SelectCoinsMasternode() {
 
     // Filter
     BOOST_FOREACH(const COutput& out, vCoins) {
-        if(out.tx->vout[out.i].nValue == GetMNCollateral(chainActive.Tip()->nHeight)*COIN) {  //exactly 16120 LUX
+        if(out.tx->vout[out.i].nValue == GetMNCollateral(pindexBestHeader->nHeight)*COIN) {  //exactly 16120 LUX
         	filteredCoins.push_back(out);
         }
     }

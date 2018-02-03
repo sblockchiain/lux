@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015 The Darkcoin developers              -*- c++ -*-
+// Copyright (c) 2014-2015 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -46,7 +46,7 @@ extern map<uint256, CLuxsendBroadcastTx> mapLuxsendBroadcastTxes;
 extern CActiveMasternode activeMasternode;
 
 //specific messages for the Luxsend protocol
-void ProcessLuxsend(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isLuxsend);
+void ProcessMessageLuxsend(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
 // get the darksend chain depth for a given input
 int GetInputLuxsendRounds(CTxIn in, int rounds=0);
@@ -150,6 +150,7 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion){
+//	unsigned int nSerSize = 0;
         READWRITE(nDenom);
         READWRITE(vin);
         READWRITE(time);
@@ -401,7 +402,7 @@ public:
     bool StatusUpdate(int newState, int newEntriesCount, int newAccepted, std::string& error, int newSessionID=0);
 
     // as a client, check and sign the final transaction
-    bool SignFinalTransaction(const CTransaction& finalTransactionNew, CNode* node);
+    bool SignFinalTransaction(CTransaction& finalTransactionNew, CNode* node);
 
     // get the last valid block hash for a given modulus
     bool GetLastValidBlockHash(uint256& hash, int mod=1, int nBlockHeight=0);

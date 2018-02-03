@@ -1,3 +1,4 @@
+
 #include "net.h"
 #include "masternodeconfig.h"
 #include "util.h"
@@ -16,21 +17,19 @@ bool CMasternodeConfig::read(boost::filesystem::path path) {
         return true; // No masternode.conf file is OK
     }
 
-    for (std::string line; std::getline(streamConfig, line); ) {
-        if (line.empty()) {
+    for(std::string line; std::getline(streamConfig, line); ) {
+        if(line.empty()) {
             continue;
         }
-
         std::istringstream iss(line);
         std::string alias, ip, privKey, txHash, outputIndex;
         if (!(iss >> alias >> ip >> privKey >> txHash >> outputIndex)) {
-            if (alias.substr(0,1) == "#") continue;
-            LogPrintf("CMasternodeConfig::read - Could not parse masternode.conf. Line: %s\n", line);
+            LogPrintf("CMasternodeConfig::read - Could not parse masternode.conf. Line: %s\n", line.c_str());
             streamConfig.close();
             return false;
         }
 
-        if (Params().NetworkID() == CBaseChainParams::MAIN) {
+        if(Params().NetworkID() == CBaseChainParams::MAIN) {
             if(CService(ip).GetPort() != 28666) {
                 LogPrintf("Invalid port detected in masternode.conf: %s (must be 17170 for mainnet)\n", line.c_str());
                 streamConfig.close();
@@ -50,6 +49,4 @@ bool CMasternodeConfig::read(boost::filesystem::path path) {
 
         add(alias, ip, privKey, txHash, outputIndex);
     }
-
-    return false;
 }

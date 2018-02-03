@@ -1,4 +1,5 @@
-// Copyright (c) 2009-2012 The Darkcoin developers              -*- c++ -*-
+
+// Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef INSTANTX_H
@@ -40,7 +41,7 @@ bool IsIXTXValid(const CTransaction& txCollateral);
 // if two conflicting locks are approved by the network, they will cancel out
 bool CheckForConflictingLocks(CTransaction& tx);
 
-void ProcessInstantX(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isInstantXCommand);
+void ProcessMessageInstantX(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
 //check if we need to vote on this transaction
 void DoConsensusVote(CTransaction& tx, int64_t nBlockHeight);
@@ -70,6 +71,7 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+//	unsigned int nSerSize = 0;
         READWRITE(txHash);
         READWRITE(vinMasternode);
         READWRITE(vchMasterNodeSignature);

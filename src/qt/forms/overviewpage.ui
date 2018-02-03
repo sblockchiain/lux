@@ -446,7 +446,7 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QProgressBar" name="obfuscationProgress">
+            <widget class="QProgressBar" name="darksendProgress">
              <property name="maximumSize">
               <size>
                <width>154</width>
@@ -510,7 +510,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLabel" name="obfuscationEnabled">
+            <widget class="QLabel" name="darksendEnabled">
              <property name="text">
               <string>Enabled/Disabled</string>
              </property>
@@ -955,7 +955,7 @@
            <bool>true</bool>
           </property>
          </widget>
-         <widget class="QPushButton" name="toggleObfuscation">
+         <widget class="QPushButton" name="toggleLuxsend">
           <property name="geometry">
            <rect>
             <x>120</x>
@@ -987,7 +987,7 @@
            <enum>Qt::Horizontal</enum>
           </property>
          </widget>
-         <widget class="QLabel" name="obfuscationStatus">
+         <widget class="QLabel" name="darksendStatus">
           <property name="geometry">
            <rect>
             <x>10</x>
@@ -1012,7 +1012,7 @@
            <bool>true</bool>
           </property>
          </widget>
-         <widget class="QPushButton" name="obfuscationAuto">
+         <widget class="QPushButton" name="darksendAuto">
           <property name="geometry">
            <rect>
             <x>10</x>
@@ -1034,7 +1034,7 @@
            <string>Try Mix</string>
           </property>
          </widget>
-         <widget class="QPushButton" name="obfuscationReset">
+         <widget class="QPushButton" name="darksendReset">
           <property name="geometry">
            <rect>
             <x>230</x>

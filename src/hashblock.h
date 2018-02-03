@@ -1,4 +1,3 @@
-// -*- c++ -*-
 #ifndef HASHBLOCK_H
 #define HASHBLOCK_H
 

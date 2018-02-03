@@ -1,5 +1,3 @@
-# -*- makefile-gmake -*-
-
 bin_PROGRAMS += qt/lux-qt
 EXTRA_LIBRARIES += qt/libbitcoinqt.a
 
@@ -20,18 +18,18 @@ QT_TS = \
   qt/locale/lux_zh_TW.ts
 
 QT_FORMS_UI = \
+  qt/forms/addeditadrenalinenode.ui \
   qt/forms/addressbookpage.ui \
+  qt/forms/adrenalinenodeconfigdialog.ui\
   qt/forms/askpassphrasedialog.ui \
   qt/forms/bip38tooldialog.ui \
   qt/forms/coincontroldialog.ui \
   qt/forms/blockexplorer.ui \
-  qt/forms/obfuscationconfig.ui \
+  qt/forms/darksendconfig.ui \
   qt/forms/editaddressdialog.ui \
   qt/forms/helpmessagedialog.ui \
   qt/forms/intro.ui \
   qt/forms/masternodemanager.ui \
-  qt/forms/addeditadrenalinenode.ui \
-  qt/forms/adrenalinenodeconfigdialog.ui \
   qt/forms/multisenddialog.ui \
   qt/forms/openuridialog.ui \
   qt/forms/optionsdialog.ui \
@@ -46,7 +44,9 @@ QT_FORMS_UI = \
   qt/forms/transactiondescdialog.ui
 
 QT_MOC_CPP = \
+  qt/moc_addeditadrenalinenode.cpp \
   qt/moc_addressbookpage.cpp \
+  qt/moc_adrenalinenodeconfigdialog.cpp \
   qt/moc_addresstablemodel.cpp \
   qt/moc_askpassphrasedialog.cpp \
   qt/moc_bip38tooldialog.cpp \
@@ -59,15 +59,13 @@ QT_MOC_CPP = \
   qt/moc_coincontroldialog.cpp \
   qt/moc_coincontroltreewidget.cpp \
   qt/moc_csvmodelwriter.cpp \
-  qt/moc_obfuscationconfig.cpp \
+  qt/moc_darksendconfig.cpp \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
   qt/moc_intro.cpp \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
   qt/moc_masternodemanager.cpp \
-  qt/moc_addeditadrenalinenode.cpp \
-  qt/moc_adrenalinenodeconfigdialog.cpp \
   qt/moc_multisenddialog.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
@@ -120,7 +118,9 @@ PROTOBUF_H = qt/paymentrequest.pb.h
 PROTOBUF_PROTO = qt/paymentrequest.proto
 
 BITCOIN_QT_H = \
+  qt/addeditadrenalinenode.h \
   qt/addressbookpage.h \
+  qt/adrenalinenodeconfigdialog.h \
   qt/addresstablemodel.h \
   qt/askpassphrasedialog.h \
   qt/bip38tooldialog.h \
@@ -133,16 +133,14 @@ BITCOIN_QT_H = \
   qt/coincontroldialog.h \
   qt/coincontroltreewidget.h \
   qt/csvmodelwriter.h \
-  qt/obfuscationconfig.h \
+  qt/darksendconfig.h \
   qt/editaddressdialog.h \
   qt/guiconstants.h \
   qt/guiutil.h \
   qt/intro.h \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
-  qt/masternodemanager.h \
-  qt/addeditadrenalinenode.h \
-  qt/adrenalinenodeconfigdialog.h \
+  qt/masternodelist.h \
   qt/multisenddialog.h \
   qt/networkstyle.h \
   qt/notificator.h \
@@ -249,8 +247,6 @@ BITCOIN_QT_CPP = \
   qt/guiutil.cpp \
   qt/intro.cpp \
   qt/masternodemanager.cpp \
-  qt/addeditadrenalinenode.cpp \
-  qt/adrenalinenodeconfigdialog.cpp \
   qt/networkstyle.cpp \
   qt/notificator.cpp \
   qt/optionsdialog.cpp \
@@ -267,18 +263,18 @@ BITCOIN_QT_CPP = \
 
 if ENABLE_WALLET
 BITCOIN_QT_CPP += \
+  qt/addeditadrenalinenode.cpp \
   qt/addressbookpage.cpp \
+  qt/adrenalinenodeconfigdialog.cpp \
   qt/addresstablemodel.cpp \
   qt/askpassphrasedialog.cpp \
   qt/bip38tooldialog.cpp \
   qt/blockexplorer.cpp \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
-  qt/obfuscationconfig.cpp \
+  qt/darksendconfig.cpp \
   qt/editaddressdialog.cpp \
   qt/masternodemanager.cpp \
-  qt/addeditadrenalinenode.cpp \
-  qt/adrenalinenodeconfigdialog.cpp \
   qt/multisenddialog.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \

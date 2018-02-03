@@ -151,8 +151,10 @@ enum opcodetype
 
     // expansion
     OP_NOP1 = 0xb0,
-    OP_NOP2 = 0xb1,
-    OP_NOP3 = 0xb2,
+    OP_CHECKLOCKTIMEVERIFY = 0xb1,
+    OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
+    OP_CHECKSEQUENCEVERIFY = 0xb2,
+    OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
     OP_NOP4 = 0xb3,
     OP_NOP5 = 0xb4,
     OP_NOP6 = 0xb5,
@@ -161,8 +163,16 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
+    // Execute EXT byte code.
+    OP_CREATE = 0xc1,
+    OP_CALL = 0xc2,
+    OP_SPEND = 0xc3,
 
     // template matching params
+    OP_GAS_PRICE = 0xf5,
+    OP_VERSION = 0xf6,
+    OP_GAS_LIMIT = 0xf7,
+    OP_DATA = 0xf8,
     OP_SMALLDATA = 0xf9,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
@@ -601,6 +611,21 @@ public:
     {
         return (size() > 0 && *begin() == OP_RETURN);
     }
+    ///////////////////////////////////////// LUX
+    bool HasOpCreate() const
+    {
+        return Find(OP_CREATE) == 1;
+    }
+
+    bool HasOpCall() const
+    {
+        return Find(OP_CALL) == 1;
+    }
+    bool HasOpSpend() const
+    {
+        return size()==1 && *begin() == OP_SPEND;
+    }
+    /////////////////////////////////////////
 
     std::string ToString() const;
     void clear()

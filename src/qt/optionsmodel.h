@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 The Bitcoin developers       -*- c++ -*-
+// Copyright (c) 2011-2013 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -43,8 +43,8 @@ public:
         ThreadsScriptVerif,  // int
         DatabaseCache,       // int
         SpendZeroConfChange, // bool
-        DarksendRounds,      // int
-        AnonymizeLuxAmount,  //int
+        LuxsendRounds,   // int
+        AnonymizeLuxAmount, //int
         ShowMasternodesTab,  // bool
         Listen,              // bool
         OptionIDRowCount,
@@ -89,7 +89,7 @@ private:
 
 signals:
     void displayUnitChanged(int unit);
-    void obfuscationRoundsChanged(int);
+    void darksendRoundsChanged(int);
     void anonymizeLuxAmountChanged(int);
     void coinControlFeaturesChanged(bool);
 };

@@ -1,5 +1,3 @@
-# -*- makefile-gmake -*-
-
 TESTS += test/test_lux test/bitcoin-util-test.py
 bin_PROGRAMS += test/test_lux
 TEST_SRCDIR = test

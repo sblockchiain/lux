@@ -16,7 +16,7 @@
 
 #include "coincontrol.h"
 #include "main.h"
-#include "darksend.h"
+//#include "obfuscation.h"
 #include "wallet.h"
 
 #include <boost/assign/list_of.hpp> // for 'map_list_of()'
@@ -431,12 +431,12 @@ void CoinControlDialog::viewItemChanged(QTreeWidgetItem* item, int column)
         else {
             coinControl->Select(outpt);
             CTxIn vin(outpt);
-            int rounds = pwalletMain->GetInputDarkSendRounds(vin);
-            if (coinControl->useObfuscation && rounds < nDarksendRounds) {
+            int rounds = GetInputLuxsendRounds(vin);
+            if (coinControl->useObfuScation && rounds < nDarksendRounds) {
                 QMessageBox::warning(this, windowTitle(),
                     tr("Non-anonymized input selected. <b>Obfuscation will be disabled.</b><br><br>If you still want to use Obfuscation, please deselect all non-nonymized inputs first and then check Obfuscation checkbox again."),
                     QMessageBox::Ok, QMessageBox::Ok);
-                coinControl->useObfuscation = false;
+                coinControl->useObfuScation = false;
             }
         }
 
@@ -597,7 +597,7 @@ void CoinControlDialog::updateLabels(WalletModel* model, QDialog* dialog)
             nChange = nAmount - nPayFee - nPayAmount;
 
             // DS Fee = overpay
-            if (coinControl->useObfuscation && nChange > 0) {
+            if (coinControl->useObfuScation && nChange > 0) {
                 nPayFee += nChange;
                 nChange = 0;
             }
@@ -803,7 +803,7 @@ void CoinControlDialog::updateView()
 
             // ds+ rounds
             CTxIn vin = CTxIn(out.tx->GetHash(), out.i);
-            int rounds = pwalletMain->GetInputDarkSendRounds(vin);
+            int rounds = GetInputLuxsendRounds(vin);
 
             if (rounds >= 0)
                 itemOutput->setText(COLUMN_OBFUSCATION_ROUNDS, strPad(QString::number(rounds), 11, " "));
