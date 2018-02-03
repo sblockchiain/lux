@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2010 Satoshi Nakamoto             -*- c++ -*-
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The LUX developers
@@ -33,8 +33,8 @@
 
 extern bool fMasterNode;
 extern bool fLiteMode;
-//extern bool fEnableSwiftTX;
-extern int nInstantXDepth;
+extern bool fEnableSwiftTX;
+extern int nSwiftTXDepth;
 extern int nDarksendRounds;
 extern int nAnonymizeLuxAmount;
 extern int nLiquidityProvider;

@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2010 Satoshi Nakamoto             -*- c++ -*-
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The LUX developers
@@ -50,6 +50,8 @@ class CValidationState;
 
 struct CBlockTemplate;
 struct CNodeStateStats;
+/**SegWit**/
+static const int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
 #define START_MASTERNODE_PAYMENTS_TESTNET 1432907775
 #define START_MASTERNODE_PAYMENTS 1432907775
@@ -121,8 +123,7 @@ static const unsigned char REJECT_CHECKPOINT = 0x43;
 
 static const int64_t STATIC_POS_REWARD = 1 * COIN; //Constant reward 8%
 
-
-inline bool IsProtocolV2(int nHeight) { return TestNet() || nHeight > 0; }
+inline bool IsProtocolV2(int nHeight) { return IsTestNet() || nHeight > 0; }
 inline int64_t GetMNCollateral(int nHeight) { return nHeight>=30000 ? 16120 : 1999999; }
 
 struct BlockHasher {
@@ -161,11 +162,6 @@ extern int64_t nReserveBalance;
 extern std::map<uint256, int64_t> mapRejectedBlocks;
 extern std::map<unsigned int, unsigned int> mapHashedBlocks;
 extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
-
-/** Best header we've seen so far (used for getheaders queries' starting points). */
-extern CBlockIndex* pindexBestHeader;
-
-extern bool fMinimizeCoinAge;
 
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
@@ -242,15 +238,14 @@ bool DisconnectBlocksAndReprocess(int blocks);
 
 // ***TODO***
 double ConvertBitsToDouble(unsigned int nBits);
-int64_t GetMasternodePayment(int nHeight, int64_t blockValue, int nMasternodeCount = 0);
+CAmount GetMasternodePayment(int nHeight, int64_t blockValue, int nMasternodeCount = 0);
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock, bool fProofOfStake);
 uint256 GetProofOfStakeLimit(int nHeight);
 inline unsigned int GetTargetSpacing(int nHeight) { return IsProtocolV2(nHeight) ? 240 : 60; }
 
 bool ActivateBestChain(CValidationState& state, CBlock* pblock = NULL);
-CAmount GetBlockValue(int nHeight);
+CAmount GetProofOfWorkReward(int64_t nFees, int nHeight);
 CAmount GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees, int nHeight);
-bool IsBlockValueValid(const CBlock& block, int64_t nExpectedValue);
 
 /** Create a new block index entry for a given block hash */
 CBlockIndex* InsertBlockIndex(uint256 hash);
@@ -329,6 +324,88 @@ CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowF
  * @param[in] mapInputs    Map of previous transactions that have outputs we're spending
  * @return True if all inputs (scriptSigs) use only standard transaction forms
  */
+
+/**
+  * Basic transaction serialization format:
+  * - int32_t nVersion
+  * - std::vector<CTxIn> vin
+  * - std::vector<CTxOut> vout
+  * - uint32_t nLockTime
+  *
+  * Extended transaction serialization format:
+  * - int32_t nVersion
+  * - unsigned char dummy = 0x00
+  * - unsigned char flags (!= 0)
+  * - std::vector<CTxIn> vin
+  * - std::vector<CTxOut> vout
+  * - if (flags & 1):
+  *   - CTxWitness wit;
+  * - uint32_t nLockTime
+  */
+ template<typename Stream, typename TxType>
+ inline void UnserializeTransaction(TxType& tx, Stream& s) {
+     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+ 
+     s >> tx.nVersion;
+     unsigned char flags = 0;
+     tx.vin.clear();
+     tx.vout.clear();
+     /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
+     s >> tx.vin;
+     if (tx.vin.size() == 0 && fAllowWitness) {
+         /* We read a dummy or an empty vin. */
+         s >> flags;
+         if (flags != 0) {
+           s >> tx.vin;
+             s >> tx.vout;
+         }
+     } else {
+         /* We read a non-empty vin. Assume a normal vout follows. */
+         s >> tx.vout;
+     }
+     if ((flags & 1) && fAllowWitness) {
+         /* The witness flag is present, and we support witnesses. */
+         flags ^= 1;
+         for (size_t i = 0; i < tx.vin.size(); i++) {
+             s >> tx.vin[i].scriptWitness.stack;
+         }
+     }
+     if (flags) {
+         /* Unknown flag in the serialization */
+         throw std::ios_base::failure("Unknown transaction optional data");
+     }
+     s >> tx.nLockTime;
+ }
+ 
+ template<typename Stream, typename TxType>
+ inline void SerializeTransaction(const TxType& tx, Stream& s) {
+     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+ 
+     s << tx.nVersion;
+     unsigned char flags = 0;
+     // Consistency check
+     if (fAllowWitness) {
+         /* Check whether witnesses need to be serialized. */
+         if (tx.HasWitness()) {
+             flags |= 1;
+         }
+     }
+     if (flags) {
+         /* Use extended format in case witnesses are to be serialized. */
+         std::vector<CTxIn> vinDummy;
+         s << vinDummy;
+         s << flags;
+     }
+     s << tx.vin;
+     s << tx.vout;
+     if (flags & 1) {
+         for (size_t i = 0; i < tx.vin.size(); i++) {
+             s << tx.vin[i].scriptWitness.stack;
+         }
+     }
+     s << tx.nLockTime;
+ }
+ 
 bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs);
 
 /** 

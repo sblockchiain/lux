@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2010 Satoshi Nakamoto             -*- c++ -*-
 // Copyright (c) 2009-2012 The Darkcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -54,8 +54,7 @@ extern map<int64_t, uint256> mapCacheBlockHashes;
 void ProcessMasternodeConnections();
 int CountMasternodesAboveProtocol(int protocolVersion);
 
-
-void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+void ProcessMasternode(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isMasternodeCommand);
 
 //
 // The Masternode Class. For managing the darksend process. It contains the input of the 1000Lux, signature to prove
@@ -141,14 +140,14 @@ public:
 
     int GetMasternodeInputAge()
     {
-        if(pindexBestHeader == NULL) return 0;
+        if(chainActive.Tip() == NULL) return 0;
 
         if(cacheInputAge == 0){
             cacheInputAge = GetInputAge(vin);
-            cacheInputAgeBlock = pindexBestHeader->nHeight;
+            cacheInputAgeBlock = chainActive.Tip()->nHeight;
         }
 
-        return cacheInputAge+(pindexBestHeader->nHeight-cacheInputAgeBlock);
+        return cacheInputAge+(chainActive.Tip()->nHeight-cacheInputAgeBlock);
     }
 };
 
@@ -189,7 +188,6 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion){
-//	unsigned int nSerSize = 0;
         READWRITE(nBlockHeight);
         READWRITE(payee);
         READWRITE(vin);
@@ -242,7 +240,5 @@ public:
     //slow
     bool GetBlockPayee(int nBlockHeight, CScript& payee);
 };
-
-
 
 #endif

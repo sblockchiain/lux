@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2013 The Bitcoin developers
+// Copyright (c) 2011-2013 The Bitcoin developers               -*- c++ -*-
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,7 +13,7 @@ class CCoinControl
 {
 public:
     CTxDestination destChange;
-    bool useObfuScation;
+    bool useObfuscation;
     bool useSwiftTX;
     bool fSplitBlock;
     int nSplitBlock;
@@ -34,7 +34,7 @@ public:
         destChange = CNoDestination();
         setSelected.clear();
         useSwiftTX = false;
-        useObfuScation = true;
+        useObfuscation = true;
         fAllowOtherInputs = false;
         fAllowWatchOnly = false;
         nMinimumTotalFee = 0;

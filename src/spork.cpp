@@ -26,30 +26,31 @@ std::map<uint256, CSporkMessage> mapSporks;
 std::map<int, CSporkMessage> mapSporksActive;
 CSporkManager sporkManager;
 
-void ProcessSpork(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
+void ProcessSpork(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isSporkCommand)
 {
     if(fLiteMode) return; //disable all darksend/masternode related functionality
 
-    if (strCommand == "spork")
-    {
+    if (strCommand == "spork") {
+        isSporkCommand = true;
+        
         //LogPrintf("ProcessSpork::spork\n");
         CDataStream vMsg(vRecv);
         CSporkMessage spork;
         vRecv >> spork;
 
-        if(pindexBestHeader == NULL) return;
+        if (chainActive.Tip() == nullptr) return;
 
         uint256 hash = spork.GetHash();
         if(mapSporks.count(hash) && mapSporksActive.count(spork.nSporkID)) {
             if(mapSporksActive[spork.nSporkID].nTimeSigned >= spork.nTimeSigned){
-                if(fDebug) LogPrintf("spork - seen %s block %d \n", hash.ToString().c_str(), pindexBestHeader->nHeight);
+                if(fDebug) LogPrintf("spork - seen %s block %d \n", hash.ToString().c_str(), chainActive.Tip()->nHeight);
                 return;
             } else {
-                if(fDebug) LogPrintf("spork - got updated spork %s block %d \n", hash.ToString().c_str(), pindexBestHeader->nHeight);
+                if(fDebug) LogPrintf("spork - got updated spork %s block %d \n", hash.ToString().c_str(), chainActive.Tip()->nHeight);
             }
         }
 
-        LogPrintf("spork - new %s ID %d Time %d bestHeight %d\n", hash.ToString().c_str(), spork.nSporkID, spork.nValue, pindexBestHeader->nHeight);
+        LogPrintf("spork - new %s ID %d Time %d bestHeight %d\n", hash.ToString().c_str(), spork.nSporkID, spork.nValue, chainActive.Tip()->nHeight);
 
         if(!sporkManager.CheckSignature(spork)){
             LogPrintf("spork - invalid signature\n");
@@ -64,16 +65,16 @@ void ProcessSpork(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
         //does a task if needed
         ExecuteSpork(spork.nSporkID, spork.nValue);
     }
-    if (strCommand == "getsporks")
-    {
-        std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
 
-        while(it != mapSporksActive.end()) {
+    else if (strCommand == "getsporks") {
+        isSporkCommand = true;
+
+        std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
+        while (it != mapSporksActive.end()) {
             pfrom->PushMessage("spork", it->second);
             it++;
         }
     }
-
 }
 
 // grab the spork, otherwise say it's off

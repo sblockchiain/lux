@@ -43,10 +43,12 @@ void ProcessMasternodeConnections(){
                 }
 }
 
-void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
+void ProcessMasternode(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isMasternodeCommand)
 {
 
     if (strCommand == "dsee") { //DarkSend Election Entry
+        isMasternodeCommand = true;
+        
         if(fLiteMode) return; //disable all darksend/masternode related functionality
 
         bool fIsInitialDownload = IsInitialBlockDownload();
@@ -155,7 +157,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
 
         CValidationState state;
         CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut((GetMNCollateral(pindexBestHeader->nHeight)-1)*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut((GetMNCollateral(chainActive.Tip()->nHeight)-1)*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
         //if(AcceptableInputs(mempool, state, tx)){
@@ -200,6 +202,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
     }
 
     else if (strCommand == "dseep") { //DarkSend Election Entry Ping
+        isMasternodeCommand = true;
+        
         if(fLiteMode) return; //disable all darksend/masternode related functionality
         bool fIsInitialDownload = IsInitialBlockDownload();
         if(fIsInitialDownload) return;
@@ -271,7 +275,11 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         int64_t askAgain = GetTime()+(60*60*24);
         askedForMasternodeListEntry[vin.prevout] = askAgain;
 
-    } else if (strCommand == "dseg") { //Get masternode list or specific entry
+    } 
+
+    else if (strCommand == "dseg") { //Get masternode list or specific entry
+        isMasternodeCommand = true;
+        
         if(fLiteMode) return; //disable all darksend/masternode related functionality
         CTxIn vin;
         vRecv >> vin;
@@ -323,6 +331,8 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
     }
 
     else if (strCommand == "mnget") { //Masternode Payments Request Sync
+        isMasternodeCommand = true;
+        
         if(fLiteMode) return; //disable all darksend/masternode related functionality
 
         /*if(pfrom->HasFulfilledRequest("mnget")) {
@@ -335,22 +345,26 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
         masternodePayments.Sync(pfrom);
         LogPrintf("mnget - Sent masternode winners to %s\n", pfrom->addr.ToString().c_str());
     }
+
+
     else if (strCommand == "mnw") { //Masternode Payments Declare Winner
+        isMasternodeCommand = true;
+        
         //this is required in litemode
         CMasternodePaymentWinner winner;
         int a = 0;
         vRecv >> winner >> a;
 
-        if(pindexBestHeader == NULL) return;
+        if(chainActive.Tip() == NULL) return;
 
         uint256 hash = winner.GetHash();
         if(mapSeenMasternodeVotes.count(hash)) {
-            if(fDebug) LogPrintf("mnw - seen vote %s Height %d bestHeight %d\n", hash.ToString().c_str(), winner.nBlockHeight, pindexBestHeader->nHeight);
+            if(fDebug) LogPrintf("mnw - seen vote %s Height %d bestHeight %d\n", hash.ToString().c_str(), winner.nBlockHeight, chainActive.Tip()->nHeight);
             return;
         }
 
-        if(winner.nBlockHeight < pindexBestHeader->nHeight - 10 || winner.nBlockHeight > pindexBestHeader->nHeight+20){
-            LogPrintf("mnw - winner out of range %s Height %d bestHeight %d\n", winner.vin.ToString().c_str(), winner.nBlockHeight, pindexBestHeader->nHeight);
+        if(winner.nBlockHeight < chainActive.Tip()->nHeight - 10 || winner.nBlockHeight > chainActive.Tip()->nHeight+20){
+            LogPrintf("mnw - winner out of range %s Height %d bestHeight %d\n", winner.vin.ToString().c_str(), winner.nBlockHeight, chainActive.Tip()->nHeight);
             return;
         }
 
@@ -360,7 +374,7 @@ void ProcessMessageMasternode(CNode* pfrom, std::string& strCommand, CDataStream
             return;
         }
 
-        LogPrintf("mnw - winning vote  %s Height %d bestHeight %d\n", winner.vin.ToString().c_str(), winner.nBlockHeight, pindexBestHeader->nHeight);
+        LogPrintf("mnw - winning vote  %s Height %d bestHeight %d\n", winner.vin.ToString().c_str(), winner.nBlockHeight, chainActive.Tip()->nHeight);
 
         if(!masternodePayments.CheckSignature(winner)){
             LogPrintf("mnw - invalid signature\n");
@@ -522,23 +536,23 @@ int GetMasternodeRank(CTxIn& vin, int64_t nBlockHeight, int minProtocol)
 //Get the last hash that matches the modulus given. Processed in reverse order
 bool GetBlockHash(uint256& hash, int nBlockHeight)
 {
-    if (pindexBestHeader == NULL) return false;
+    if (chainActive.Tip() == NULL) return false;
 
     if(nBlockHeight == 0)
-        nBlockHeight = pindexBestHeader->nHeight;
+        nBlockHeight = chainActive.Tip()->nHeight;
 
     if(mapCacheBlockHashes.count(nBlockHeight)){
         hash = mapCacheBlockHashes[nBlockHeight];
         return true;
     }
 
-    const CBlockIndex *BlockLastSolved = pindexBestHeader;
-    const CBlockIndex *BlockReading = pindexBestHeader;
+    const CBlockIndex *BlockLastSolved = chainActive.Tip();
+    const CBlockIndex *BlockReading = chainActive.Tip();
 
-    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || pindexBestHeader->nHeight+1 < nBlockHeight) return false;
+    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || chainActive.Tip()->nHeight+1 < nBlockHeight) return false;
 
     int nBlocksAgo = 0;
-    if(nBlockHeight > 0) nBlocksAgo = (pindexBestHeader->nHeight+1)-nBlockHeight;
+    if(nBlockHeight > 0) nBlocksAgo = (chainActive.Tip()->nHeight+1)-nBlockHeight;
     assert(nBlocksAgo >= 0);
 
     int n = 0;
@@ -564,7 +578,7 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
 //
 uint256 CMasterNode::CalculateScore(int mod, int64_t nBlockHeight)
 {
-    if(pindexBestHeader == NULL) return 0;
+    if(chainActive.Tip() == NULL) return 0;
 
     uint256 hash = 0;
     uint256 aux = vin.prevout.hash + vin.prevout.n;
@@ -599,13 +613,12 @@ void CMasterNode::Check()
     if(!unitTest){
         CValidationState state;
         CTransaction tx = CTransaction();
-        CTxOut vout = CTxOut((GetMNCollateral(pindexBestHeader->nHeight)-1)*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut((GetMNCollateral(chainActive.Tip()->nHeight)-1)*COIN, darkSendPool.collateralPubKey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
-        //if(!AcceptableInputs(mempool, state, tx)){
         bool pfMissingInputs;
-        if(!AcceptableInputs(mempool, state, tx, false, &pfMissingInputs)){
+        if (!AcceptableInputs(mempool, state, tx, false, &pfMissingInputs)) {
             enabled = 3;
             return;
         }
@@ -663,9 +676,9 @@ uint64_t CMasternodePayments::CalculateScore(uint256 blockHash, CTxIn& vin)
     uint256 n3 = Hash(BEGIN(vin.prevout.hash), END(vin.prevout.hash));
     uint256 n4 = n3 > n2 ? (n3 - n2) : (n2 - n3);
 
-    printf(" -- CMasternodePayments CalculateScore() n2 = %d \n", n2.Get64());
-    printf(" -- CMasternodePayments CalculateScore() n3 = %d \n", n3.Get64());
-    printf(" -- CMasternodePayments CalculateScore() n4 = %d \n", n4.Get64());
+    LogPrintf(" -- CMasternodePayments CalculateScore() n2 = %d \n", n2.Get64());
+    LogPrintf(" -- CMasternodePayments CalculateScore() n3 = %d \n", n3.Get64());
+    LogPrintf(" -- CMasternodePayments CalculateScore() n4 = %d \n", n4.Get64());
 
     return n4.Get64();
 }
@@ -732,13 +745,13 @@ bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerI
 void CMasternodePayments::CleanPaymentList()
 {
     LOCK(cs_masternodes);
-    if(pindexBestHeader == NULL) return;
+    if(chainActive.Tip() == NULL) return;
 
     int nLimit = std::max(((int)vecMasternodes.size())*2, 1000);
 
     vector<CMasternodePaymentWinner>::iterator it;
     for(it=vWinning.begin();it<vWinning.end();it++){
-        if(pindexBestHeader->nHeight - (*it).nBlockHeight > nLimit){
+        if(chainActive.Tip()->nHeight - (*it).nBlockHeight > nLimit){
             if(fDebug) LogPrintf("CMasternodePayments::CleanPaymentList - Removing old masternode payment - block %d\n", (*it).nBlockHeight);
             vWinning.erase(it);
             break;
@@ -815,7 +828,7 @@ void CMasternodePayments::Sync(CNode* node)
 {
     int a = 0;
     BOOST_FOREACH(CMasternodePaymentWinner& winner, vWinning)
-                    if(winner.nBlockHeight >= pindexBestHeader->nHeight-10 && winner.nBlockHeight <= pindexBestHeader->nHeight + 20)
+                    if(winner.nBlockHeight >= chainActive.Tip()->nHeight-10 && winner.nBlockHeight <= chainActive.Tip()->nHeight + 20)
                         node->PushMessage("mnw", winner, a);
 }
 

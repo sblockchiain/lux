@@ -48,7 +48,7 @@ extern std::map<uint256, CSporkMessage> mapSporks;
 extern std::map<int, CSporkMessage> mapSporksActive;
 extern CSporkManager sporkManager;
 
-void ProcessSpork(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+void ProcessSpork(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool &isSporkCommand);
 int GetSporkValue(int nSporkID);
 bool IsSporkActive(int nSporkID);
 void ExecuteSpork(int nSporkID, int nValue);
@@ -67,7 +67,7 @@ public:
     int64_t nTimeSigned;
 
     uint256 GetHash(){
-        uint256 n = Hash(BEGIN(nSporkID), END(nTimeSigned));
+        uint256 n = Phi1612(BEGIN(nSporkID), END(nTimeSigned));
         return n;
     }
 
@@ -75,12 +75,11 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-//	unsigned int nSerSize = 0;
         READWRITE(nSporkID);
         READWRITE(nValue);
         READWRITE(nTimeSigned);
         READWRITE(vchSig);
-	}
+    }
 };
 
 

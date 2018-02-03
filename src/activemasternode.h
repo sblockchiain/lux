@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2010 Satoshi Nakamoto             -*- c++ -*-
 // Copyright (c) 2009-2012 The DarkCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -9,13 +9,11 @@
 #include "sync.h"
 #include "net.h"
 #include "key.h"
-#include "primitives/transaction.h"
+//#include "primitives/transaction.h"
 #include "main.h"
 #include "init.h"
 #include "wallet.h"
 #include "darksend.h"
-
-class COutput;
 
 // Responsible for activating the masternode and pinging the network
 class CActiveMasternode
