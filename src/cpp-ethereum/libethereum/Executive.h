@@ -20,7 +20,7 @@
 
 #include <functional>
 #ifndef LUX_BUILD
-#include <json/json.h>
+#include <jsoncpp/json/json.h>
 #endif
 #include <libdevcore/Log.h>
 #include <libevmcore/Instruction.h>

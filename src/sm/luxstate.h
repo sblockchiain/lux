@@ -6,7 +6,7 @@
 #include <crypto/ripemd160.h>
 #include <uint256.h>
 #include <primitives/transaction.h>
-#include <lux/luxtransaction.h>
+#include <sm/luxtransaction.h>
 
 #include <libethereum/Executive.h>
 #include <libethcore/SealEngine.h>

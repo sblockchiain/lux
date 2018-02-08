@@ -20,7 +20,7 @@
 
 #include <boost/timer.hpp>
 #ifndef LUX_BUILD
-#include <json/json.h>
+#include <jsoncpp/json/json.h>
 #endif
 #include <libdevcore/CommonIO.h>
 #include <libevm/VMFactory.h>

@@ -11,6 +11,7 @@
 #include "utilstrencodings.h"
 #include <sm/luxstate.h>
 #include <sm/luxtransaction.h>
+#include <sm/luxDGP.h>
 #include <boost/foreach.hpp>
 
 using namespace std;
@@ -31,6 +32,8 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_SCRIPTHASH: return "scripthash";
     case TX_MULTISIG: return "multisig";
     case TX_NULL_DATA: return "nulldata";
+    case TX_CREATE: return "create";
+    case TX_CALL: return "call";
     }
     return NULL;
 }
