@@ -12,6 +12,7 @@
 #include "utilstrencodings.h"
 
 #include <assert.h>
+#include <iostream>
 
 #include <boost/assign/list_of.hpp>
 
@@ -121,7 +122,7 @@ public:
         const char* pszTimestamp = "Lux - Implemented New PHI Algo PoW/PoS Hybird - Parallel Masternode - ThankYou - 216k155"; // Input Activation code to activate blockchain
         CMutableTransaction txNew;
         txNew.nVersion = 1;
-        txNew.nTime = 1507656633;
+        txNew.nTime = 1518605624;
         txNew.nLockTime = 0;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
@@ -132,23 +133,25 @@ public:
         genesis.hashPrevBlock = 0;
         genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
-        genesis.nTime = 1507656633; //10/10/2017
+        genesis.nTime = 1514488096; //2/14/2018
         genesis.nBits = 0x1e0fffff;
-        genesis.nNonce = 986946;
+        genesis.nNonce = 1424135;
 
         hashGenesisBlock = genesis.GetHash();
 
-        assert(hashGenesisBlock == uint256("0x00000759bb3da130d7c9aedae170da8335f5a0d01a9007e4c8d3ccd08ace6a42"));
-        assert(genesis.hashMerkleRoot == uint256("0xe08ae0cfc35a1d70e6764f347fdc54355206adeb382446dd54c32cd0201000d3"));
+	std::cout << "Genesis: " << hashGenesisBlock.ToString() << std::endl;
+	std::cout << " Merkle: " << genesis.hashMerkleRoot.ToString() << std::endl;
+        assert(hashGenesisBlock == uint256("0x3d6eb2b8042aa3e4b20f16bd40698565e51fd98c2614837fd59ff03df00d82af"));
+        assert(genesis.hashMerkleRoot == uint256("0x5959364b32c602bd6eb664cce93013347cf1bae326d4478207578d547e17665a"));
 
-        vSeeds.push_back(CDNSSeedData("luxseed1.luxcore.io", "luxseed1.luxcore.io")); // DNSSeed
-        vSeeds.push_back(CDNSSeedData("luxseed2.luxcore.io", "luxseed2.luxcore.io")); // DNSSeed
-        vSeeds.push_back(CDNSSeedData("luxseed3.luxcore.io", "luxseed3.luxcore.io")); // DNSSeed
-        vSeeds.push_back(CDNSSeedData("luxseed4.luxcore.io", "luxseed4.luxcore.io")); // DNSSeed
-        vSeeds.push_back(CDNSSeedData("209.250.254.156", "209.250.254.156")); // Non-standard DNS request
-        vSeeds.push_back(CDNSSeedData("45.76.114.209", "45.76.114.209")); // Non-standard DNS request
-        vSeeds.push_back(CDNSSeedData("5.189.142.181", "5.189.142.181")); // Non-standard DNS request
-        vSeeds.push_back(CDNSSeedData("5.77.44.147", "5.77.44.147")); // Non-standard DNS request
+        vSeeds.push_back(CDNSSeedData("luxcore", "94.130.96.255"));
+        vSeeds.push_back(CDNSSeedData("luxcore1", "94.130.96.255"));
+        vSeeds.push_back(CDNSSeedData("luxcore2", "94.130.96.255"));
+        vSeeds.push_back(CDNSSeedData("luxcore3", "94.130.96.255"));
+        vSeeds.push_back(CDNSSeedData("luxcore4", "mail.ducx.io"));
+        vSeeds.push_back(CDNSSeedData("luxcore5", "mail.ducx.io"));
+        vSeeds.push_back(CDNSSeedData("luxcore6", "mail.ducx.io"));
+        vSeeds.push_back(CDNSSeedData("luxcore7", "mail.ducx.io"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,48); // LUX Start letter L
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,48);
@@ -164,7 +167,7 @@ public:
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
         fMineBlocksOnDemand = false;
-        fSkipProofOfWorkCheck = false;
+        fSkipProofOfWorkCheck = true;
         fTestnetToBeDeprecatedFieldRPC = false;
         fHeadersFirstSyncingActive = false;
 
@@ -172,7 +175,7 @@ public:
         strSporkKey = "04a983220ea7a38a7106385003fef77896538a382a0dcc389cc45f3c98751d9af423a097789757556259351198a8aaa628a1fd644c3232678c5845384c744ff8d7";
 
         strObfuscationPoolDummyAddress = "LgcjpYxWa5EB9KCYaRtpPgG8kgiWRvJY38";
-        nStartMasternodePayments = 1507656633; // 10/10/2017
+        nStartMasternodePayments = 1507656633 + ( 86400 * 10 ); // 10/10/2017
     }
 
     const Checkpoints::CCheckpointData& Checkpoints() const

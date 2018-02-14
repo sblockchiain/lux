@@ -2077,14 +2077,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         return false;
 
     // verify that the view's current state corresponds to the previous block
-    uint256 hashPrevBlock;
-    if (pindex->pprev) {
-        hashPrevBlock = pindex->pprev->GetBlockHash();
-    }
-    if (hashPrevBlock != view.GetBestBlock()) {
-        LogPrintf("%s: block=%s,%d prev=%s best=%s\n", __func__, pindex->GetBlockHash().GetHex(), pindex->nHeight, view.GetBestBlock().GetHex(), hashPrevBlock.GetHex());
-        return error("%s: previous block not best", __func__);
-    }
+    uint256 hashPrevBlock = pindex->pprev == NULL ? uint256(0) : pindex->pprev->GetBlockHash();
+    if (hashPrevBlock != view.GetBestBlock())
+        LogPrintf("%s: hashPrev=%s view=%s\n", __func__, hashPrevBlock.GetHex(), view.GetBestBlock().GetHex());
 
     assert(hashPrevBlock == view.GetBestBlock());
 
@@ -3069,7 +3064,7 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool f
 {
     // Check proof of work matches claimed amount
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits))
-        return state.DoS(50, error("%s: proof of work failed", __func__),
+        return state.DoS(50, error("%s: proof of work failed: nBits=0x%08x", __func__, block.nBits),
             REJECT_INVALID, "high-hash");
     return true;
 }
@@ -4834,6 +4829,7 @@ static bool ProcessMessage(CNode* pfrom, const string &strCommand, CDataStream& 
                     // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get
                     // anyone relaying LegitTxX banned)
                     CValidationState stateDummy;
+
 
                     if (setMisbehaving.count(fromPeer))
                         continue;
