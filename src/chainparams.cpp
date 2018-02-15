@@ -54,7 +54,7 @@ static void convertSeed6(std::vector<CAddress>& vSeedsOut, const SeedSpec6* data
 // + Contains no strange transactions
 static Checkpoints::MapCheckpoints mapCheckpoints =
     boost::assign::map_list_of
-            ( 0,   uint256("0x00000759bb3da130d7c9aedae170da8335f5a0d01a9007e4c8d3ccd08ace6a42") )
+            ( 0,   uint256("0x000006d31267d31482acedb2b2c0bdd78acfdd46dc80edcfaf16857492c87bce") )
 /*
             ( 175,   uint256("0x000000000002611e8e3c2e460e7fcd0a39ee210b9915fc76a5573a0704bb2b33") )
             ( 2241,   uint256("0x69e2e47fb84085c4b82b6090f701c7ac03a4e510bd1f41cc072c33061cf83a0d") )
@@ -140,13 +140,23 @@ public:
         genesis.nVersion = 1;
         genesis.nTime = 1514488096; //2/14/2018
         genesis.nBits = 0x1e0fffff;
-        genesis.nNonce = 1424135;
+        genesis.nNonce = 783007;
 
+	// hashGenesisBlock = uint256("0x000006d31267d31482acedb2b2c0bdd78acfdd46dc80edcfaf16857492c87bce");
         hashGenesisBlock = genesis.GetHash();
+	if (true && genesis.GetHash() != hashGenesisBlock)
+        {
+            std::cout << "recalculating params for mainnet.\n";
+            // deliberately empty for loop finds nonce value.
+            for(genesis.nNonce = 0; genesis.GetHash() > bnProofOfWorkLimit; genesis.nNonce++){ } 
+            std::cout << "new mainnet genesis merkle root: " << genesis.hashMerkleRoot.ToString().c_str() << std::endl;
+            std::cout << "new mainnet genesis nonce: " << genesis.nNonce << std::endl;
+            std::cout << "new mainnet genesis hash: " << genesis.GetHash().ToString().c_str() << std::endl;
+        }	
 
 	std::cout << "Genesis: " << hashGenesisBlock.ToString() << std::endl;
 	std::cout << " Merkle: " << genesis.hashMerkleRoot.ToString() << std::endl;
-        assert(hashGenesisBlock == uint256("0x3d6eb2b8042aa3e4b20f16bd40698565e51fd98c2614837fd59ff03df00d82af"));
+        assert(hashGenesisBlock == uint256("0x000006d31267d31482acedb2b2c0bdd78acfdd46dc80edcfaf16857492c87bce"));
         assert(genesis.hashMerkleRoot == uint256("0x5959364b32c602bd6eb664cce93013347cf1bae326d4478207578d547e17665a"));
 
         vSeeds.push_back(CDNSSeedData("luxcore", "94.130.96.255"));

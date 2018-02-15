@@ -417,8 +417,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
     if (vNodes.empty())
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "LUX is not connected!");
 
+/*
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "LUX is downloading blocks...");
+*/
 
     static unsigned int nTransactionsUpdatedLast;
 
