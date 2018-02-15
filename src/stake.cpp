@@ -335,7 +335,7 @@ bool MultiplyStakeTarget(uint256 &bnTarget, int nModifierHeight, int64_t nModifi
 
 #   if 0
     static std::map<int, mult> stakeTargetMultipliers = boost::assign::map_list_of
-#       include "multipliers.i"
+#       include "multipliers.h"
         ;
 #   else
     static std::map<int, mult> stakeTargetMultipliers;
